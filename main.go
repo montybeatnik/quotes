@@ -11,10 +11,14 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// Store houses the DB. It serves as a layer of abstraction with methods
+// tailored to the quotes logic.
 type Store struct {
 	db *sql.DB
 }
 
+// AddCategory adds a category for quotes. This allows us to group quotes
+// into meaningful buckets.
 func (s *Store) AddCategory(name string) error {
 	res, err := s.db.Exec(`
 INSERT INTO categories (
@@ -28,6 +32,8 @@ INSERT INTO categories (
 	return nil
 }
 
+// Categories retrieves all categories from the DB. As this table grows,
+// there may be a need to paginate.
 func (s *Store) Categories() ([]Category, error) {
 	var cs []Category
 	query := `
@@ -50,28 +56,43 @@ FROM categories;`
 	return cs, nil
 }
 
+// App holds the muxer or (router) for hitting different routes.
+// It also houses the store. (Way to state the obvious, huh?)
 type App struct {
 	mux   *http.ServeMux
 	store Store
 }
 
+// Category facilatates the categorical nature of quotes.
 type Category struct {
 	ID        int       `json:"id"`
 	Name      string    `json:"name,omitempty"`
 	CreatedAt time.Time `json:"created_at,omitempty"`
 }
 
-type NewQuote struct {
-	Message   string    `json:"message,omitempty"`
-	Author    string    `json:"author,omitempty"`
+// Author is the person attributed to the quote.
+type Author struct {
+	ID        int       `json:"id"`
+	Name      string    `json:"name,omitempty"`
 	CreatedAt time.Time `json:"created_at,omitempty"`
 }
 
+// NewQuote is a container for the category, author, and the message.
+type NewQuote struct {
+	Category  Category  `json:"category"`
+	Message   string    `json:"message,omitempty"`
+	Author    Author    `json:"author,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+}
+
+// JSONErr is a layer of abstraction for producing errors in
+// the JSON format.
 type JSONErr struct {
 	Err error  `json:"err,omitempty"`
 	Msg string `json:"msg,omitempty"`
 }
 
+// healthCheck lets an API caller know if the server is healthy.
 func (a *App) healthCheck(w http.ResponseWriter, r *http.Request) {
 	err := a.store.db.Ping()
 	if err != nil {
@@ -81,6 +102,7 @@ func (a *App) healthCheck(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(JSONErr{Err: nil, Msg: "system is healthy"}) // could be a const
 }
 
+// newCategory handler to add new categories.
 func (a *App) newCategory(w http.ResponseWriter, r *http.Request) {
 	var nc Category
 	if err := json.NewDecoder(r.Body).Decode(&nc); err != nil {
@@ -93,6 +115,7 @@ func (a *App) newCategory(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// getCategory handler to get categories.
 func (a *App) getCategories(w http.ResponseWriter, r *http.Request) {
 	cs, err := a.store.Categories()
 	if err != nil {
@@ -102,6 +125,7 @@ func (a *App) getCategories(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(cs)
 }
 
+// newQuote adds a new quote.
 func (a *App) newQuote(w http.ResponseWriter, r *http.Request) {
 	var nq NewQuote
 	if err := json.NewDecoder(r.Body).Decode(&nq); err != nil {
