@@ -72,8 +72,13 @@ type JSONErr struct {
 	Msg string `json:"msg,omitempty"`
 }
 
-func (a *App) helloWorld(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "hello, world")
+func (a *App) healthCheck(w http.ResponseWriter, r *http.Request) {
+	err := a.store.db.Ping()
+	if err != nil {
+		json.NewEncoder(w).Encode(JSONErr{Err: err})
+		return
+	}
+	json.NewEncoder(w).Encode(JSONErr{Err: nil, Msg: "system is healthy"}) // could be a const
 }
 
 func (a *App) newCategory(w http.ResponseWriter, r *http.Request) {
@@ -121,7 +126,7 @@ func main() {
 	server := http.Server{Addr: ":8080"}
 	store := Store{db: db}
 	app := App{mux: http.NewServeMux(), store: store}
-	app.mux.HandleFunc("/", app.helloWorld)
+	app.mux.HandleFunc("/health", app.healthCheck)
 	app.mux.HandleFunc("/category/new", app.newCategory)
 	app.mux.HandleFunc("/category", app.getCategories)
 	app.mux.HandleFunc("/quote/new", app.newQuote)
