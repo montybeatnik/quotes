@@ -1,2 +1,5 @@
+dbup:
+	
+
 dbshell:
-	docker exec -it pg_lauras_creations psql -U postgres -d quotes 
+	docker exec -it pg_quotes psql -U postgres -d quotes 

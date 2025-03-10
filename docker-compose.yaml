@@ -1,0 +1,22 @@
+version: '3'
+services:
+    postgresql:
+        image: postgres:16
+        container_name: pg_quotes
+        ports:
+            - "5432:5432"
+        environment:
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=postgres
+        volumes:
+            - pg_quotes:/var/lib/postgresql/data
+volumes:
+    pg_quotes:
+        external: true
+
+# sudo docker run -d \
+#     --name pg_pinger \
+#     -e POSTGRES_PASSWORD=postgres \
+#     -v pg_pinger:/var/lib/postgresql/data \
+#     -p 5450:5432 \
+#     postgres:12
